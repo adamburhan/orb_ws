@@ -25,6 +25,7 @@ Vocabulary/ORBvoc.txt
 build/
 devel/
 logs/
+*sh
 
 lib/
 
