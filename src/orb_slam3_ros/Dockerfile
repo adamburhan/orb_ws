@@ -2,6 +2,25 @@ FROM amd64/ros:noetic-perception-focal
 
 ARG DEBIAN_FRONTEND=noninteractive
 ARG ROS_DISTRO=noetic
+ARG SYNC_DATESTAMP=final
+
+
+# Install necessary tools
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
+    gnupg2 \
+    lsb-release \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+# Remove old ROS sources and keys
+
+RUN rm /usr/share/keyrings/ros-archive-keyring.gpg
+RUN curl -sSL https://raw.githubusercontent.com/ros/rosdistro/master/ros.key -o /usr/share/keyrings/ros-archive-keyring.gpg
+
+# If using ROS 1
+RUN rm /etc/apt/sources.list.d/ros-latest.list
+RUN apt-key del "C1CF 6E31 E6BA DE88 68B1  72B4 F42E D6FB AB17 C654" # This is the old key fingerprint, you should see by running apt-key list 
 
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \

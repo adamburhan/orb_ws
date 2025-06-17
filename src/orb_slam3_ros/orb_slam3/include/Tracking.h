@@ -337,6 +337,11 @@ protected:
     //Current matches in frame
     int mnMatchesInliers;
 
+    // *** DATA LOGGING ***
+    size_t mnTrackedPts_;
+    bool mbStatsReady_;
+    // *** DATA LOGGING ***
+
     //Last Frame, KeyFrame and Relocalisation Info
     KeyFrame* mpLastKeyFrame;
     unsigned int mnLastKeyFrameId;

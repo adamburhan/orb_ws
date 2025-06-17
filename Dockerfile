@@ -2,6 +2,22 @@ FROM amd64/ros:noetic-perception-focal
 
 ARG DEBIAN_FRONTEND=noninteractive
 ARG ROS_DISTRO=noetic
+ARG SYNC_DATESTAMP=final
+
+# Replace broken repo key & URL
+RUN rm -f /etc/apt/sources.list.d/ros1-latest.list \
+    && echo "deb [signed-by=/usr/share/keyrings/ros1-snapshot.gpg] \
+        http://snapshots.ros.org/noetic/final/ubuntu focal main" \
+       > /etc/apt/sources.list.d/ros1-snapshot.list \
+    && (apt-key del F42ED6FBAB17C654 || true) \
+    && set -eux; \
+       key='4B63CF8FDE49746E98FA01DDAD19BAB3CBF125EA'; \
+       export GNUPGHOME="$(mktemp -d)"; \
+       gpg --batch --keyserver keyserver.ubuntu.com --recv-keys "$key"; \
+       mkdir -p /usr/share/keyrings; \
+       gpg --batch --export "$key" > /usr/share/keyrings/ros1-snapshot.gpg; \
+       gpgconf --kill all; rm -rf "$GNUPGHOME"
+
 
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
@@ -33,6 +49,9 @@ RUN git clone --branch v0.9 --depth 1 https://github.com/stevenlovegrove/Pangoli
 COPY requirements.txt /root/requirements.txt
 RUN python3 -m pip install --no-cache-dir -r /root/requirements.txt
 
+# script to run the whole pipeline
+COPY scripts/run_slam.sh /root/scripts/run_slam.sh
+RUN chmod +x scripts/run_slam.sh
 
 #
 # install RealSenseSDK / RealSense ROS wrapper

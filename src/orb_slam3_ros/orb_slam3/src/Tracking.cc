@@ -46,7 +46,7 @@ Tracking::Tracking(System *pSys, ORBVocabulary* pVoc, FrameDrawer *pFrameDrawer,
     mbOnlyTracking(false), mbMapUpdated(false), mbVO(false), mpORBVocabulary(pVoc), mpKeyFrameDB(pKFDB),
     mbReadyToInitializate(false), mpSystem(pSys), mpViewer(NULL), bStepByStep(false),
     mpFrameDrawer(pFrameDrawer), mpMapDrawer(pMapDrawer), mpAtlas(pAtlas), mnLastRelocFrameId(0), time_recently_lost(5.0),
-    mnInitialFrameId(0), mbCreatedMap(false), mnFirstFrameId(0), mpCamera2(nullptr), mpLastKeyFrame(static_cast<KeyFrame*>(NULL))
+    mnInitialFrameId(0), mbCreatedMap(false), mnFirstFrameId(0), mpCamera2(nullptr), mpLastKeyFrame(static_cast<KeyFrame*>(NULL)), mnTrackedPts_(0), mbStatsReady_(false)
 {
     // Load camera parameters from settings file
     if(settings){
@@ -1655,6 +1655,44 @@ Sophus::SE3f Tracking::GrabImageMonocular(const cv::Mat &im, const double &times
     lastID = mCurrentFrame.mnId;
     Track();
 
+    // *** DATA LOGGING START ***
+
+    #ifdef ROS_FOUND
+    //if (mCurrentFrame.isSet()) {
+    Sophus::SE3f Twc_log = mCurrentFrame.GetPose().inverse();
+    orb_slam3_ros::VOStats stats_msg;
+    stats_msg.header.stamp = ros::Time(mCurrentFrame.mTimeStamp);
+    stats_msg.id = mCurrentFrame.mnId;
+
+    stats_msg.pose.position.x = Twc_log.translation().x();
+    stats_msg.pose.position.y = Twc_log.translation().y();
+    stats_msg.pose.position.z = Twc_log.translation().z();
+
+    stats_msg.pose.orientation.x = Twc_log.unit_quaternion().coeffs().x();
+    stats_msg.pose.orientation.y = Twc_log.unit_quaternion().coeffs().y();
+    stats_msg.pose.orientation.z = Twc_log.unit_quaternion().coeffs().z();
+    stats_msg.pose.orientation.w = Twc_log.unit_quaternion().coeffs().w();
+
+    if (mbStatsReady_) {
+        stats_msg.n_tracked = mnTrackedPts_;
+        stats_msg.n_inliers = mnMatchesInliers;
+        mbStatsReady_ = false;
+    }
+
+    else {
+        stats_msg.n_tracked = 0;
+        stats_msg.n_inliers = 0;
+    }
+
+    stats_msg.state = static_cast<uint8_t>(mState);
+
+    vo_stats_pub_.publish(stats_msg);
+
+    //}
+    #endif
+
+    // *** DATA LOGGING END ***
+
     return mCurrentFrame.GetPose();
 }
 
@@ -2183,8 +2221,9 @@ void Tracking::Track()
                 bOK = TrackLocalMap();
         }
 
-        if(bOK)
+        if(bOK) { 
             mState = OK;
+        }
         else if (mState == OK)
         {
             if (mSensor == System::IMU_MONOCULAR || mSensor == System::IMU_STEREO || mSensor == System::IMU_RGBD)
@@ -2254,28 +2293,6 @@ void Tracking::Track()
                 Sophus::SE3f LastTwc = mLastFrame.GetPose().inverse();
                 mVelocity = mCurrentFrame.GetPose() * LastTwc;
                 mbVelocity = true;
-
-                // *** DATA LOGGING START ***
-
-                #ifdef ROS_FOUND
-                geometry_msgs::PoseStamped pose_msg;
-                pose_msg.header.stamp = ros::Time(mCurrentFrame.mTimeStamp);
-
-                pose_msg.pose.position.x = mVelocity.translation().x();
-                pose_msg.pose.position.y = mVelocity.translation().y();
-                pose_msg.pose.position.z = mVelocity.translation().z();
-
-                pose_msg.pose.orientation.w = mVelocity.unit_quaternion().coeffs().w();
-                pose_msg.pose.orientation.x = mVelocity.unit_quaternion().coeffs().x();
-                pose_msg.pose.orientation.y = mVelocity.unit_quaternion().coeffs().y();
-                pose_msg.pose.orientation.z = mVelocity.unit_quaternion().coeffs().z();
-
-                edge_pub_.publish(pose_msg);
-
-                #endif
-
-                // *** DATA LOGGING END ***
-
             }
             else {
                 mbVelocity = false;
@@ -3097,18 +3114,8 @@ bool Tracking::TrackLocalMap()
     // *** DATA LOGGING START ***
     #ifdef ROS_FOUND
 
-    orb_slam3_ros::VOStats stats_msg;
-
-    std_msgs::Header header;
-    header.stamp = ros::Time(mCurrentFrame.mTimeStamp);
-    header.frame_id = std::to_string(mCurrentFrame.mnId);
-
-    stats_msg.header = header;
-
-    stats_msg.n_tracked = aux1;
-    stats_msg.n_inliers = mnMatchesInliers++;
-
-    vo_stats_pub_.publish(stats_msg);
+    mnTrackedPts_ = aux1;
+    mbStatsReady_ = true;
 
     #endif 
 
