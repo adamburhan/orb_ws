@@ -22,10 +22,7 @@ Thirdparty/DBoW2/lib/
 Thirdparty/g2o/build/
 Thirdparty/g2o/lib/
 Vocabulary/ORBvoc.txt
-build/
-devel/
-logs/
-*sh
+
 
 lib/
 
@@ -49,5 +46,13 @@ my_settings.txt
 borrar/*
 
 */ExecMean.txt
+
+# catkin workspace build artifacts
+build/ 
+devel/
+install/
+logs/
+.catkin_tools/
+
 
 !Dockerfile

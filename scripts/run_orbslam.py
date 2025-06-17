@@ -37,7 +37,7 @@ data_path = os.path.abspath("data")
 for dataset, sequences in DATASETS.items():
     for sequence in sequences:
         for mode in MODES:
-            print(f"\n🚀 Running {dataset}/{sequence} in {mode} mode")
+            print(f"\nRunning {dataset}/{sequence} in {mode} mode")
 
             subprocess.run(
                 f"xhost +local:docker && docker run --rm "
