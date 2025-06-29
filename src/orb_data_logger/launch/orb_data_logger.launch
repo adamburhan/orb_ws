@@ -3,5 +3,6 @@
     <node name="listener" pkg="orb_data_logger" type="main.py" output="screen">
         <param name="output_dir" value="$(arg output_dir)"/>
         <param name="stats_topic" value="/orb_slam3/vo_stats"/>
+        <remap from="/imu" to="/imu0"/>
     </node>
 </launch>

@@ -12,7 +12,19 @@ DATASET=$1
 SEQUENCE=$2
 MODE=$3
 
-cd /root/orb_ws && catkin build -j4
+# ROS envrionment
+source /opt/ros/noetic/setup.bash
+
+
+cd /root/orb_ws 
+
+if [ ! -d .catkin_tools ]; then
+    catkin init
+    catkin config \
+    --extend /opt/ros/noetic 
+fi
+
+catkin build -j$(nproc) 
 source /root/orb_ws/devel/setup.bash
 
 LOG_DIR="/root/data/${DATASET}/${SEQUENCE}/${MODE}/logs"

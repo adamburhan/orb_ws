@@ -54,5 +54,6 @@ install/
 logs/
 .catkin_tools/
 
+*.sif
 
 !Dockerfile

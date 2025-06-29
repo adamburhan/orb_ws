@@ -2,6 +2,7 @@
 import rospy
 import message_filters
 from geometry_msgs.msg import PoseStamped
+from sensor_msgs.msg import Imu
 from std_srvs.srv import Trigger, TriggerResponse
 from orb_slam3_ros.msg import VOStats  
 from orb_slam3_ros.srv import SaveMap
@@ -23,8 +24,12 @@ class ORBDataLogger:
         # Open output files
         self.traj_file = open(os.path.join(self.output_dir, "stamped_traj_estimate.txt"), 'w')
         self.vo_file = open(os.path.join(self.output_dir, "vo_features.csv"), 'w')
+        self.imu_file = open(os.path.join(self.output_dir, "imu_data.csv"), 'w')
+        
         self.vo_writer = csv.writer(self.vo_file)
         self.vo_writer.writerow(["timestamp", "id", "num_matches", "num_inliers", "state"])  
+        self.imu_writer = csv.writer(self.imu_file)
+        self.imu_writer.writerow(["timestamp", "acc_x", "acc_y", "acc_z", "gyro_x", "gyro_y", "gyro_z"])  
 
         # flush and exit service
         self._srv = rospy.Service("~save_and_exit", Trigger, self._handle_save)
@@ -33,6 +38,7 @@ class ORBDataLogger:
         # Subscribers
         #pose_sub = message_filters.Subscriber(pose_topic, PoseStamped)
         stats_sub = message_filters.Subscriber(stats_topic, VOStats)
+        self.imu_sub = message_filters.Subscriber("/imu", Imu, self.imu_callback)
 
         # Synchronize topics
         sync = message_filters.ApproximateTimeSynchronizer(
@@ -68,6 +74,19 @@ class ORBDataLogger:
             stats_msg.state
         ])
 
+    def imu_callback(self, imu_msg):
+        """Process raw IMU data"""
+        ts = imu_msg.header.stamp.to_sec()
+        acc = imu_msg.linear_acceleration
+        gyro = imu_msg.angular_velocity
+
+        # Write IMU data
+        self.imu_writer.writerow([
+            f"{ts:.9f}",
+            acc.x, acc.y, acc.z,
+            gyro.x, gyro.y, gyro.z
+        ])
+        
     def _handle_save(self, req):
         self.__shutdown()
         rospy.signal_shutdown("SaveAndExit called")
@@ -78,6 +97,7 @@ class ORBDataLogger:
         # close files
         self.traj_file.close()
         self.vo_file.close()
+        self.imu_file.close()
         rospy.loginfo(f"{self.node_name}: files closed and flushed.")
 
         # call save trajectory service
