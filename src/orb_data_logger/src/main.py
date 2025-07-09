@@ -24,21 +24,25 @@ class ORBDataLogger:
         # Open output files
         self.traj_file = open(os.path.join(self.output_dir, "stamped_traj_estimate.txt"), 'w')
         self.vo_file = open(os.path.join(self.output_dir, "vo_features.csv"), 'w')
-        self.imu_file = open(os.path.join(self.output_dir, "imu_data.csv"), 'w')
+        #self.imu_file = open(os.path.join(self.output_dir, "imu_data.csv"), 'w')
         
         self.vo_writer = csv.writer(self.vo_file)
         self.vo_writer.writerow(["timestamp", "id", "num_matches", "num_inliers", "state"])  
-        self.imu_writer = csv.writer(self.imu_file)
-        self.imu_writer.writerow(["timestamp", "acc_x", "acc_y", "acc_z", "gyro_x", "gyro_y", "gyro_z"])  
+        #self.imu_writer = csv.writer(self.imu_file)
+        #self.imu_writer.writerow(["timestamp", "acc_x", "acc_y", "acc_z", "gyro_x", "gyro_y", "gyro_z"])  
 
         # flush and exit service
         self._srv = rospy.Service("~save_and_exit", Trigger, self._handle_save)
         rospy.on_shutdown(self.__shutdown)
+        
+        self.frame_count = 0
+        self.imu_count = 0
+        self.flush_interval = 100
 
         # Subscribers
         #pose_sub = message_filters.Subscriber(pose_topic, PoseStamped)
         stats_sub = message_filters.Subscriber(stats_topic, VOStats)
-        self.imu_sub = message_filters.Subscriber("/imu", Imu, self.imu_callback)
+        #self.imu_sub = rospy.Subscriber("/imu", Imu, self.imu_callback, queue_size=1000)
 
         # Synchronize topics
         sync = message_filters.ApproximateTimeSynchronizer(
@@ -73,6 +77,12 @@ class ORBDataLogger:
             stats_msg.n_inliers,
             stats_msg.state
         ])
+        
+        self.frame_count += 1
+        if self.frame_count % self.flush_interval == 0:
+            # Flush files periodically
+            self.traj_file.flush()
+            self.vo_file.flush()
 
     def imu_callback(self, imu_msg):
         """Process raw IMU data"""
@@ -87,6 +97,11 @@ class ORBDataLogger:
             gyro.x, gyro.y, gyro.z
         ])
         
+        self.imu_count += 1
+        if self.imu_count % self.flush_interval == 0:
+            # Flush IMU file periodically
+            self.imu_file.flush()
+        
     def _handle_save(self, req):
         self.__shutdown()
         rospy.signal_shutdown("SaveAndExit called")
@@ -94,16 +109,19 @@ class ORBDataLogger:
                                message="files flushed, node shutting down")
 
     def __shutdown(self):
-        # close files
-        self.traj_file.close()
-        self.vo_file.close()
-        self.imu_file.close()
-        rospy.loginfo(f"{self.node_name}: files closed and flushed.")
+        try:
+            # close files
+            self.traj_file.close()
+            self.vo_file.close()
+            #self.imu_file.close()
+            rospy.loginfo(f"{self.node_name}: files closed and flushed.")
 
-        # call save trajectory service
-        rospy.wait_for_service('/orb_slam3/save_traj')
-        save_srv = rospy.ServiceProxy('/orb_slam3/save_traj', SaveMap)
-        save_srv(os.path.join(self.output_dir, "orb"))
+            # call save trajectory service
+            rospy.wait_for_service('/orb_slam3/save_traj', timeout=5.0)
+            save_srv = rospy.ServiceProxy('/orb_slam3/save_traj', SaveMap)
+            save_srv(os.path.join(self.output_dir, "orb"))
+        except Exception as e:
+            rospy.logerr(f"Error during shutdown: {e}")
 
 if __name__ == "__main__":
     try:
