@@ -9,11 +9,12 @@
         <!-- Parameters for original ORB-SLAM3 -->
         <param name="voc_file"      type="string" value="$(find orb_slam3_ros)/orb_slam3/Vocabulary/ORBvoc.txt.bin"/>
         <param name="settings_file" type="string" value="$(find orb_slam3_ros)/config/Monocular/EuRoC.yaml"/>
+        <param name="gt_poses_file" type="string" value="/root/data/euroc/MH_01_easy/mono/logs/stamped_groundtruth.txt"/>
 
         <!-- Parameters for ROS -->
         <param name="world_frame_id"    type="string"   value="world" />
         <param name="cam_frame_id"      type="string"   value="camera" />
-        <param name="enable_pangolin"   type="bool"     value="false" />
+        <param name="enable_pangolin"   type="bool"     value="true" />
     </node>
     
     <!-- Visualization -->

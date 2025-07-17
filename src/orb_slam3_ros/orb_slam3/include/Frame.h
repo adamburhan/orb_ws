@@ -79,6 +79,9 @@ public:
     // Set the camera pose. (Imu pose is not modified!)
     void SetPose(const Sophus::SE3<float> &Tcw);
 
+    // Set camera ground truth pose.
+    void SetGroundTruthPose(const Sophus::SE3<float> &Twc_gt);
+
     // Set IMU velocity
     void SetVelocity(Eigen::Vector3f Vw);
 
@@ -172,6 +175,16 @@ private:
     Eigen::Matrix<float,3,3> mRcw;
     Eigen::Matrix<float,3,1> mtcw;
     bool mbHasPose;
+
+    Sophus::SE3<float> mTcw_gt;
+    Eigen::Matrix<float,3,3> mRcw_gt;
+    Eigen::Matrix<float,3,1> mtcw_gt;
+
+    Sophus::SE3<float> mTwc_gt;
+    Eigen::Matrix<float,3,3> mRwc_gt;
+    Eigen::Matrix<float,3,1> mtwc_gt;
+
+    bool mbHasPose_gt;
 
     //Rcw_ not necessary as Sophus has a method for extracting the rotation matrix: Tcw_.rotationMatrix()
     //tcw_ not necessary as Sophus has a method for extracting the translation vector: Tcw_.translation()

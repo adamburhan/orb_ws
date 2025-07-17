@@ -5020,7 +5020,7 @@ int Optimizer::PoseInertialOptimizationLastFrame(Frame *pFrame, bool bRecInit)
                     const float unc2 = pFrame->mpCamera->uncertainty2(obs);
 
                     const float invSigma2 = pFrame->mvInvLevelSigma2[kpUn.octave]/unc2;
-                    e->setInformation(Eigen::Matrix2d::Identity()*invSigma2);
+                    e->setInformation(Eigen::Matrix2d::Identity()*invSigma2); // Replace this by error?
 
                     g2o::RobustKernelHuber* rk = new g2o::RobustKernelHuber;
                     e->setRobustKernel(rk);

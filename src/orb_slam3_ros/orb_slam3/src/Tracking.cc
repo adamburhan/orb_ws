@@ -1648,6 +1648,8 @@ Sophus::SE3f Tracking::GrabImageMonocular(const cv::Mat &im, const double &times
     mCurrentFrame.mNameFile = filename;
     mCurrentFrame.mnDataset = mnNumDataset;
 
+    // set gt pose if available
+
 #ifdef REGISTER_TIMES
     vdORBExtract_ms.push_back(mCurrentFrame.mTimeORB_Ext);
 #endif
@@ -1696,6 +1698,100 @@ Sophus::SE3f Tracking::GrabImageMonocular(const cv::Mat &im, const double &times
     return mCurrentFrame.GetPose();
 }
 
+
+Sophus::SE3f Tracking::GrabImageMonocular(const cv::Mat &im, const double &timestamp, string filename, Sophus::SE3<float> *gt_pose)
+{
+    mImGray = im;
+    if(mImGray.channels()==3)
+    {
+        if(mbRGB)
+            cvtColor(mImGray,mImGray,cv::COLOR_RGB2GRAY);
+        else
+            cvtColor(mImGray,mImGray,cv::COLOR_BGR2GRAY);
+    }
+    else if(mImGray.channels()==4)
+    {
+        if(mbRGB)
+            cvtColor(mImGray,mImGray,cv::COLOR_RGBA2GRAY);
+        else
+            cvtColor(mImGray,mImGray,cv::COLOR_BGRA2GRAY);
+    }
+
+    if (mSensor == System::MONOCULAR)
+    {
+        if(mState==NOT_INITIALIZED || mState==NO_IMAGES_YET ||(lastID - initID) < mMaxFrames)
+            mCurrentFrame = Frame(mImGray,timestamp,mpIniORBextractor,mpORBVocabulary,mpCamera,mDistCoef,mbf,mThDepth);
+        else
+            mCurrentFrame = Frame(mImGray,timestamp,mpORBextractorLeft,mpORBVocabulary,mpCamera,mDistCoef,mbf,mThDepth);
+    }
+    else if(mSensor == System::IMU_MONOCULAR)
+    {
+        if(mState==NOT_INITIALIZED || mState==NO_IMAGES_YET)
+        {
+            mCurrentFrame = Frame(mImGray,timestamp,mpIniORBextractor,mpORBVocabulary,mpCamera,mDistCoef,mbf,mThDepth,&mLastFrame,*mpImuCalib);
+        }
+        else
+            mCurrentFrame = Frame(mImGray,timestamp,mpORBextractorLeft,mpORBVocabulary,mpCamera,mDistCoef,mbf,mThDepth,&mLastFrame,*mpImuCalib);
+    }
+
+    if (mState==NO_IMAGES_YET)
+        t0=timestamp;
+
+    mCurrentFrame.mNameFile = filename;
+    mCurrentFrame.mnDataset = mnNumDataset;
+
+    // set gt pose if available
+    if (gt_pose) {
+        mCurrentFrame.SetGroundTruthPose(*gt_pose);
+    }
+
+#ifdef REGISTER_TIMES
+    vdORBExtract_ms.push_back(mCurrentFrame.mTimeORB_Ext);
+#endif
+
+    lastID = mCurrentFrame.mnId;
+    Track();
+
+    // *** DATA LOGGING START ***
+
+    #ifdef ROS_FOUND
+    //if (mCurrentFrame.isSet()) {
+    Sophus::SE3f Twc_log = mCurrentFrame.GetPose().inverse();
+    orb_slam3_ros::VOStats stats_msg;
+    stats_msg.header.stamp = ros::Time(mCurrentFrame.mTimeStamp);
+    stats_msg.id = mCurrentFrame.mnId;
+
+    stats_msg.pose.position.x = Twc_log.translation().x();
+    stats_msg.pose.position.y = Twc_log.translation().y();
+    stats_msg.pose.position.z = Twc_log.translation().z();
+
+    stats_msg.pose.orientation.x = Twc_log.unit_quaternion().coeffs().x();
+    stats_msg.pose.orientation.y = Twc_log.unit_quaternion().coeffs().y();
+    stats_msg.pose.orientation.z = Twc_log.unit_quaternion().coeffs().z();
+    stats_msg.pose.orientation.w = Twc_log.unit_quaternion().coeffs().w();
+
+    if (mbStatsReady_) {
+        stats_msg.n_tracked = mnTrackedPts_;
+        stats_msg.n_inliers = mnMatchesInliers;
+        mbStatsReady_ = false;
+    }
+
+    else {
+        stats_msg.n_tracked = 0;
+        stats_msg.n_inliers = 0;
+    }
+
+    stats_msg.state = static_cast<uint8_t>(mState);
+
+    vo_stats_pub_.publish(stats_msg);
+
+    //}
+    #endif
+
+    // *** DATA LOGGING END ***
+
+    return mCurrentFrame.GetPose();
+}
 
 void Tracking::GrabImuData(const IMU::Point &imuMeasurement)
 {

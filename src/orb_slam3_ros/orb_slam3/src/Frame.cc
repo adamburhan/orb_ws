@@ -436,6 +436,18 @@ void Frame::SetPose(const Sophus::SE3<float> &Tcw) {
     mbHasPose = true;
 }
 
+void Frame::SetGroundTruthPose(const Sophus::SE3<float> &Twc_gt) {
+    mTwc_gt = Twc_gt;
+    mRwc_gt = mTwc_gt.rotationMatrix();
+    mtwc_gt = mTwc_gt.translation();
+
+    mTcw_gt = mTwc_gt.inverse();
+    mRcw_gt = mTcw_gt.rotationMatrix();
+    mtcw_gt = mTcw_gt.translation();
+
+    mbHasPose_gt = true;
+}
+
 void Frame::SetNewBias(const IMU::Bias &b)
 {
     mImuBias = b;
