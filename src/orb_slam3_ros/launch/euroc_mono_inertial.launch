@@ -11,6 +11,11 @@
         <param name="voc_file"      type="string" value="$(find orb_slam3_ros)/orb_slam3/Vocabulary/ORBvoc.txt.bin"/>
         <param name="settings_file" type="string" value="$(find orb_slam3_ros)/config/Monocular-Inertial/EuRoC.yaml"/>
 
+        <!-- Parameters for adding imu noise -->
+        <param name="add_imu_noise" type="bool" value="true" />
+        <param name="accel_noise_sigma" type="double" value="0.1" /> <!-- m/s^2 -->
+        <param name="gyro_noise_sigma" type="double" value="0.01" /> <!-- rad/s -->
+
         <!-- Parameters for ROS -->
         <param name="world_frame_id"    type="string"   value="world" />
         <param name="cam_frame_id"      type="string"   value="camera" />
