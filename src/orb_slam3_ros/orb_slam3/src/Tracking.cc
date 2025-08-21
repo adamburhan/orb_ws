@@ -1651,7 +1651,6 @@ Sophus::SE3f Tracking::GrabImageMonocular(const cv::Mat &im, const double &times
 #ifdef REGISTER_TIMES
     vdORBExtract_ms.push_back(mCurrentFrame.mTimeORB_Ext);
 #endif
-
     lastID = mCurrentFrame.mnId;
     Track();
 
@@ -1659,7 +1658,8 @@ Sophus::SE3f Tracking::GrabImageMonocular(const cv::Mat &im, const double &times
 
     #ifdef ROS_FOUND
     //if (mCurrentFrame.isSet()) {
-    Sophus::SE3f Twc_log = mCurrentFrame.GetPose().inverse();
+    //Sophus::SE3f Twc_log = mCurrentFrame.GetPose().inverse();
+    Sophus::SE3f Twc_log = mCurrentFrame.GetImuPose();
     orb_slam3_ros::VOStats stats_msg;
     stats_msg.header.stamp = ros::Time(mCurrentFrame.mTimeStamp);
     stats_msg.id = mCurrentFrame.mnId;
@@ -1683,7 +1683,7 @@ Sophus::SE3f Tracking::GrabImageMonocular(const cv::Mat &im, const double &times
         stats_msg.n_tracked = 0;
         stats_msg.n_inliers = 0;
     }
-
+    
     stats_msg.state = static_cast<uint8_t>(mState);
 
     vo_stats_pub_.publish(stats_msg);
