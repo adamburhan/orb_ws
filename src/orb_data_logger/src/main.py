@@ -5,6 +5,7 @@ from geometry_msgs.msg import PoseStamped
 from sensor_msgs.msg import Imu
 from std_srvs.srv import Trigger, TriggerResponse
 from orb_slam3_ros.msg import VOStats  
+from orb_slam3_ros.msg import ImuPreintegrated
 from orb_slam3_ros.srv import SaveMap
 import csv
 from datetime import datetime
@@ -24,25 +25,25 @@ class ORBDataLogger:
         # Open output files
         self.traj_file = open(os.path.join(self.output_dir, "stamped_traj_estimate.txt"), 'w')
         self.vo_file = open(os.path.join(self.output_dir, "vo_features.csv"), 'w')
-        #self.imu_file = open(os.path.join(self.output_dir, "imu_data.csv"), 'w')
+        # self.imu_file = open(os.path.join(self.output_dir, "imu_data.csv"), 'w')
         
         self.vo_writer = csv.writer(self.vo_file)
-        self.vo_writer.writerow(["timestamp", "id", "num_matches", "num_inliers", "state"])  
-        #self.imu_writer = csv.writer(self.imu_file)
-        #self.imu_writer.writerow(["timestamp", "acc_x", "acc_y", "acc_z", "gyro_x", "gyro_y", "gyro_z"])  
+        self.vo_writer.writerow(["timestamp", "id", "num_matches", "num_inliers", "state"]) 
+        # self.imu_writer = csv.writer(self.imu_file)
+        # self.imu_writer.writerow(["timestamp", "ax", "ay", "az", "gx", "gy", "gz"])  
 
         # flush and exit service
         self._srv = rospy.Service("~save_and_exit", Trigger, self._handle_save)
         rospy.on_shutdown(self.__shutdown)
         
         self.frame_count = 0
-        self.imu_count = 0
+        # self.imu_count = 0
         self.flush_interval = 100
 
         # Subscribers
         #pose_sub = message_filters.Subscriber(pose_topic, PoseStamped)
         stats_sub = message_filters.Subscriber(stats_topic, VOStats)
-        #self.imu_sub = rospy.Subscriber("/imu", Imu, self.imu_callback, queue_size=1000)
+        # self.imu_sub = rospy.Subscriber("/imu", Imu, self.imu_callback, queue_size=1000)
 
         # Synchronize topics
         sync = message_filters.ApproximateTimeSynchronizer(
@@ -77,7 +78,7 @@ class ORBDataLogger:
             stats_msg.n_inliers,
             stats_msg.state
         ])
-        
+          
         self.frame_count += 1
         if self.frame_count % self.flush_interval == 0:
             # Flush files periodically
