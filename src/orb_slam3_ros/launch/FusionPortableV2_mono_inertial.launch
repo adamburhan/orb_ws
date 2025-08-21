@@ -4,12 +4,12 @@
     <!-- Main node -->
     <node name="orb_slam3" pkg="orb_slam3_ros" type="ros_mono_inertial" output="screen">
         <!-- change the topics according to the dataset -->
-        <remap from="/camera/image_raw"     to="/cam0/image_raw"/>
-        <remap from="/imu"                  to="/imu0"/>
+        <remap from="/camera/image_raw"     to="/camera/image_raw"/>
+        <remap from="/imu"                  to="/stim300/imu/data_raw"/>
 
         <!-- Parameters for original ORB-SLAM3 -->
         <param name="voc_file"      type="string" value="$(find orb_slam3_ros)/orb_slam3/Vocabulary/ORBvoc.txt.bin"/>
-        <param name="settings_file" type="string" value="$(find orb_slam3_ros)/config/Monocular-Inertial/EuRoC.yaml"/>
+        <param name="settings_file" type="string" value="$(find orb_slam3_ros)/config/Monocular-Inertial/FusionPortableV2.yaml"/>
 
         <!-- Parameters for adding imu noise -->
         <param name="add_imu_noise" type="bool" value="false" />
