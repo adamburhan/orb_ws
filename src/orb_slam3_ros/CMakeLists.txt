@@ -69,7 +69,6 @@ add_service_files(
 add_message_files(
   FILES 
   VOStats.msg
-  ImuPreintegrated.msg
 )
 
 generate_messages(

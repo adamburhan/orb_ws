@@ -23,12 +23,8 @@ public:
 class ImageGrabber
 {
 public:
-    ImageGrabber(ImuGrabber *pImuGb, double accel_sigma = 0.0, double gyro_sigma = 0.0, bool add_noise = false)
-        : mpImuGb(pImuGb),
-          generator(std::random_device{}()),
-          accel_noise_dist(0.0, accel_sigma),
-          gyro_noise_dist(0.0, gyro_sigma),
-          add_imu_noise(add_noise)
+    ImageGrabber(ImuGrabber *pImuGb, const bool bClahe)
+        : mpImuGb(pImuGb), mbClahe(bClahe)
     {}
 
     void GrabImage(const sensor_msgs::ImageConstPtr& msg);
@@ -39,11 +35,9 @@ public:
     std::mutex mBufMutex;
     ImuGrabber *mpImuGb;
 
-private:
-    std::default_random_engine generator;
-    std::normal_distribution<double> accel_noise_dist;
-    std::normal_distribution<double> gyro_noise_dist;
-    bool add_imu_noise;
+    const bool mbClahe;
+    cv::Ptr<cv::CLAHE> mClahe = cv::createCLAHE(3.0, cv::Size(8, 8));
+
 };
 
 
@@ -79,19 +73,12 @@ int main(int argc, char **argv)
     node_handler.param<std::string>(node_name + "/cam_frame_id", cam_frame_id, "camera");
     node_handler.param<std::string>(node_name + "/imu_frame_id", imu_frame_id, "imu");
 
-    // imu noise
-    double accel_noise_sigma, gyro_noise_sigma;
-    bool add_imu_noise;
-    node_handler.param<double>(node_name + "/accel_noise_sigma", accel_noise_sigma, 0.0);
-    node_handler.param<double>(node_name + "/gyro_noise_sigma", gyro_noise_sigma, 0.0);
-    node_handler.param<bool>(node_name + "/add_imu_noise", add_imu_noise, false);
-
     // Create SLAM system. It initializes all system threads and gets ready to process frames.
     sensor_type = ORB_SLAM3::System::IMU_MONOCULAR;
     pSLAM = new ORB_SLAM3::System(voc_file, settings_file, sensor_type, enable_pangolin);
 
     ImuGrabber imugb;
-    ImageGrabber igb(&imugb, accel_noise_sigma, gyro_noise_sigma, add_imu_noise);
+    ImageGrabber igb(&imugb, false);
 
     ros::Subscriber sub_imu = node_handler.subscribe("/imu", 1000, &ImuGrabber::GrabImu, &imugb); 
     ros::Subscriber sub_img = node_handler.subscribe("/camera/image_raw", 100, &ImageGrabber::GrabImage, &igb);
@@ -185,16 +172,6 @@ void ImageGrabber::SyncWithImu()
                     float gyr_y = mpImuGb->imuBuf.front()->angular_velocity.y;
                     float gyr_z = mpImuGb->imuBuf.front()->angular_velocity.z;
 
-                    if (add_imu_noise) {
-                        acc_x += accel_noise_dist(generator);
-                        acc_y += accel_noise_dist(generator);
-                        acc_z += accel_noise_dist(generator);
-
-                        gyr_x += gyro_noise_dist(generator);
-                        gyr_y += gyro_noise_dist(generator);
-                        gyr_z += gyro_noise_dist(generator);
-                    }
-
                     cv::Point3f acc(acc_x, acc_y, acc_z);
                     
                     cv::Point3f gyr(gyr_x, gyr_y, gyr_z);
@@ -207,6 +184,8 @@ void ImageGrabber::SyncWithImu()
                 }
             }
             mpImuGb->mBufMutex.unlock();
+            if(mbClahe)
+                mClahe->apply(im,im);
 
             // ORB-SLAM3 runs in TrackMonocular()
             Sophus::SE3f Tcw = pSLAM->TrackMonocular(im, tIm, vImuMeas);

@@ -1657,7 +1657,7 @@ Sophus::SE3f Tracking::GrabImageMonocular(const cv::Mat &im, const double &times
     // *** DATA LOGGING START ***
 
     #ifdef ROS_FOUND
-    //if (mCurrentFrame.isSet()) {
+    if (mCurrentFrame.isSet()) {
     //Sophus::SE3f Twc_log = mCurrentFrame.GetPose().inverse();
     Sophus::SE3f Twc_log = mCurrentFrame.GetImuPose();
     orb_slam3_ros::VOStats stats_msg;
@@ -1688,7 +1688,7 @@ Sophus::SE3f Tracking::GrabImageMonocular(const cv::Mat &im, const double &times
 
     vo_stats_pub_.publish(stats_msg);
 
-    //}
+    }
     #endif
 
     // *** DATA LOGGING END ***
